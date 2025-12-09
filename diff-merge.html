@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Ferramenta de Diff & Merge de Texto</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jsdiff/5.1.0/diff.min.js"></script>
+    <link rel="stylesheet" href="style.css">
+  </head>
+  <body>
+    <header>
+      <h1>Diff & Merge Tool</h1>
+      <div class="controls">
+        <button class="btn-primary" onclick="compareTexts()">
+          Comparar & Gerar Merge
+        </button>
+        <button class="btn-primary" onclick="copyResult()">
+          Copiar Resultado
+        </button>
+      </div>
+    </header>
+
+    <div class="container">
+      <div class="pane">
+        <label>Texto Original (Esquerda)</label>
+        <textarea id="text1" placeholder="Cole o texto original aqui...">
+public class Exemplo {
+    public void main() {
+        System.out.println("Olá Mundo");
+        int a = 10;
+    }
+}</textarea
+        >
+      </div>
+
+      <div class="pane" style="flex: 1.5">
+        <label>Visualização de Diferenças (Clique para selecionar)</label>
+        <div id="merge-view"></div>
+      </div>
+
+      <div class="pane">
+        <label>Texto Modificado (Direita)</label>
+        <textarea id="text2" placeholder="Cole o texto modificado aqui...">
+public class Exemplo {
+    public void main() {
+        System.out.println("Hello World");
+        // int a = 10; removido
+        int b = 20;
+    }
+}</textarea
+        >
+      </div>
+    </div>
+
+    <div class="pane output-pane">
+      <label>Resultado Final (Merge)</label>
+      <textarea id="result-output" readonly></textarea>
+    </div>
+
+    <script src="script.js"></script>
+  </body>
+</html>
