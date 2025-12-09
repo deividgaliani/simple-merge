@@ -23,14 +23,21 @@
     <div class="container">
       <div class="pane">
         <label>Texto Original (Esquerda)</label>
-        <textarea id="text1" placeholder="Cole o texto original aqui...">
+        <div class="editor-container">
+            <div id="gutter1" class="gutter"></div>
+            <textarea
+                id="text1"
+                placeholder="Cole o texto original aqui..."
+                oninput="updateLineNumbers('text1', 'gutter1')"
+                onscroll="syncScroll('text1', 'gutter1')"
+            >
 public class Exemplo {
     public void main() {
         System.out.println("Olá Mundo");
         int a = 10;
     }
-}</textarea
-        >
+}</textarea>
+        </div>
       </div>
 
       <div class="pane" style="flex: 1.5">
@@ -40,21 +47,31 @@ public class Exemplo {
 
       <div class="pane">
         <label>Texto Modificado (Direita)</label>
-        <textarea id="text2" placeholder="Cole o texto modificado aqui...">
+        <div class="editor-container">
+            <div id="gutter2" class="gutter"></div>
+            <textarea
+                id="text2"
+                placeholder="Cole o texto modificado aqui..."
+                oninput="updateLineNumbers('text2', 'gutter2')"
+                onscroll="syncScroll('text2', 'gutter2')"
+            >
 public class Exemplo {
     public void main() {
         System.out.println("Hello World");
         // int a = 10; removido
         int b = 20;
     }
-}</textarea
-        >
+}</textarea>
+        </div>
       </div>
     </div>
 
     <div class="pane output-pane">
       <label>Resultado Final (Merge)</label>
-      <textarea id="result-output" readonly></textarea>
+      <div class="editor-container">
+          <div id="gutter-result" class="gutter"></div>
+          <textarea id="result-output" readonly onscroll="syncScroll('result-output', 'gutter-result')"></textarea>
+      </div>
     </div>
 
     <script src="script.js"></script>

@@ -146,6 +146,8 @@ function updateFinalOutput() {
   const outputElement = document.getElementById("result-output");
   if(outputElement) {
      outputElement.value = finalText;
+     // Update line numbers for result since it's updated programmatically
+     updateLineNumbers('result-output', 'gutter-result');
   }
 }
 
@@ -169,4 +171,36 @@ function copyResult() {
 }
 
 // Inicializa comparação ao carregar
-window.onload = compareTexts;
+window.onload = function() {
+    compareTexts();
+    // Initial line numbers
+    updateLineNumbers('text1', 'gutter1');
+    updateLineNumbers('text2', 'gutter2');
+
+    // Add event listeners for sync scroll
+    // Using simple approach: onscroll on textarea updates gutter
+    // The HTML elements will have oninput and onscroll attributes, but we can also bind here if needed.
+    // For simplicity, we rely on the HTML attributes calling these functions globally.
+};
+
+function updateLineNumbers(textAreaId, gutterId) {
+    const textarea = document.getElementById(textAreaId);
+    const gutter = document.getElementById(gutterId);
+    if (!textarea || !gutter) return;
+
+    const lines = textarea.value.split('\n').length;
+    // Generate numbers 1 to lines
+    // Using Array.from is cleaner but loop is faster for huge files
+    let html = '';
+    for(let i=1; i<=lines; i++) {
+        html += `<div>${i}</div>`;
+    }
+    gutter.innerHTML = html;
+}
+
+function syncScroll(textAreaId, gutterId) {
+    const textarea = document.getElementById(textAreaId);
+    const gutter = document.getElementById(gutterId);
+    if (!textarea || !gutter) return;
+    gutter.scrollTop = textarea.scrollTop;
+}

@@ -64,12 +64,36 @@ textarea {
   flex: 1;
   background-color: var(--input-bg);
   color: var(--text-color);
-  border: 1px solid var(--border-color);
+  border: none;
   padding: 10px;
   resize: none;
   font-family: inherit;
   font-size: 14px;
+  line-height: 1.5;
   outline: none;
+}
+
+.editor-container {
+  display: flex;
+  flex: 1;
+  border: 1px solid var(--border-color);
+  background-color: var(--input-bg);
+  min-height: 0;
+}
+
+.gutter {
+  background-color: #2d2d2d;
+  color: #6e7681;
+  min-width: 40px;
+  padding: 10px 5px;
+  text-align: right;
+  border-right: 1px solid var(--border-color);
+  font-family: inherit;
+  font-size: 14px;
+  line-height: 1.5;
+  overflow: hidden;
+  user-select: none;
+  white-space: pre;
 }
 
 /* Área central de Merge */
@@ -77,6 +101,7 @@ textarea {
   overflow-y: auto;
   background-color: var(--input-bg);
   border: 1px solid var(--border-color);
+  line-height: 1.5;
 }
 
 .line-block {
@@ -122,6 +147,7 @@ textarea {
   white-space: pre-wrap;
   word-break: break-all;
   font-size: 13px;
+  line-height: 1.5;
 }
 
 .action-btn {
@@ -134,6 +160,7 @@ textarea {
   padding: 2px 5px;
   border-radius: 3px;
   pointer-events: none;
+  line-height: normal;
 }
 
 /* Estilo para item selecionado no merge */
