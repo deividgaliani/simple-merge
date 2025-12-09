@@ -2,7 +2,7 @@
 
 Uma ferramenta web simples e eficiente para comparar e mesclar dois textos, rodando inteiramente no navegador.
 
-🔗 **Acesse online:** [Link do seu GitHub Pages será aqui](https://seu-usuario.github.io/diff-merge/)
+🔗 **Acesse online:** [https://deividgaliani.github.io/simple-merge/](https://deividgaliani.github.io/simple-merge/)
 
 ## 🚀 Funcionalidades
 
@@ -37,7 +37,7 @@ Uma ferramenta web simples e eficiente para comparar e mesclar dois textos, roda
 
 1.  Clone este repositório:
     ```bash
-    git clone https://github.com/seu-usuario/diff-merge.git
+    git clone https://github.com/deividgaliani/simple-merge.git
     ```
 2.  Abra o arquivo `index.html` em seu navegador favorito.
 
