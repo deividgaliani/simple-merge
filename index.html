@@ -11,18 +11,30 @@
     <header>
       <h1>Diff & Merge Tool</h1>
       <div class="controls">
-        <button class="btn-primary" onclick="compareTexts()">
-          Comparar & Gerar Merge
+        <button id="btn-compare" class="btn-primary" onclick="startMerge()">
+          Comparar & Iniciar Merge
         </button>
-        <button class="btn-primary" onclick="copyResult()">
-          Copiar Resultado
+        <button id="btn-back" class="btn-secondary" onclick="showInputStage()" style="display: none;">
+          Voltar para Edição
+        </button>
+        
+        <button id="btn-accept-left" class="btn-secondary" onclick="acceptAll('left')" style="display: none; border-color: #f66; color: #fcc;">
+          &lt;&lt; Aceitar Todos (Esq)
+        </button>
+        <button id="btn-accept-right" class="btn-secondary" onclick="acceptAll('right')" style="display: none; border-color: #6f6; color: #cfc;">
+          Aceitar Todos (Dir) &gt;&gt;
+        </button>
+
+        <button id="btn-copy" class="btn-primary" onclick="copyResult()" style="display: none;">
+          Copiar Resultado Final
         </button>
       </div>
     </header>
 
-    <div class="container">
+    <!-- Estágio de Entrada (Colagem de texto) -->
+    <div id="input-stage" class="container">
       <div class="pane">
-        <label>Texto Original (Esquerda)</label>
+        <label>Texto Original (Base / Left)</label>
         <div class="editor-container">
             <div id="gutter1" class="gutter"></div>
             <textarea
@@ -40,13 +52,8 @@ public class Exemplo {
         </div>
       </div>
 
-      <div class="pane" style="flex: 1.5">
-        <label>Visualização de Diferenças (Clique para selecionar)</label>
-        <div id="merge-view"></div>
-      </div>
-
       <div class="pane">
-        <label>Texto Modificado (Direita)</label>
+        <label>Texto Modificado (Remote / Right)</label>
         <div class="editor-container">
             <div id="gutter2" class="gutter"></div>
             <textarea
@@ -66,11 +73,15 @@ public class Exemplo {
       </div>
     </div>
 
-    <div class="pane output-pane">
-      <label>Resultado Final (Merge)</label>
-      <div class="editor-container">
-          <div id="gutter-result" class="gutter"></div>
-          <textarea id="result-output" readonly onscroll="syncScroll('result-output', 'gutter-result')"></textarea>
+    <!-- Estágio de Merge (3 Colunas) -->
+    <div id="merge-stage" class="merge-container" style="display: none;">
+      <div class="merge-header">
+        <div class="col-header">Original (Left)</div>
+        <div class="col-header">Resultado (Center - Editável)</div>
+        <div class="col-header">Modificado (Right)</div>
+      </div>
+      <div id="merge-rows-container">
+        <!-- Linhas geradas via JS -->
       </div>
     </div>
 

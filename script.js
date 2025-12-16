@@ -1,196 +1,287 @@
-// Estado global para armazenar as decisões de merge
-// Array de objetos: { id: number, type: 'common'|'conflict', leftText: string, rightText: string, choice: 'left'|'right'|null }
-let mergeState = [];
+// Estado global
+let mergeRows = []; // Armazena referências para facilitar a extração do resultado
 
-function compareTexts() {
+// Funções de Navegação
+function startMerge() {
   const text1 = document.getElementById("text1").value;
   const text2 = document.getElementById("text2").value;
-  const mergeView = document.getElementById("merge-view");
 
-  if (!mergeView) return; // Segurança caso o elemento não exista
+  // Renderizar a UI de Merge
+  renderMergeView(text1, text2);
 
-  mergeView.innerHTML = "";
-  mergeState = [];
+  // Alternar Visibilidade
+  document.getElementById("input-stage").style.display = "none";
+  document.getElementById("merge-stage").style.display = "flex";
+  
+  document.getElementById("btn-compare").style.display = "none";
+  toggleMergeButtons(true);
+}
 
-  // Usa jsdiff para calcular diferenças linha a linha
-  // Certifique-se de que a biblioteca jsdiff foi carregada antes
+function showInputStage() {
+  document.getElementById("input-stage").style.display = "flex";
+  document.getElementById("merge-stage").style.display = "none";
+  
+  document.getElementById("btn-compare").style.display = "inline-block";
+  toggleMergeButtons(false);
+}
+
+function toggleMergeButtons(show) {
+    const display = show ? "inline-block" : "none";
+    document.getElementById("btn-back").style.display = display;
+    document.getElementById("btn-copy").style.display = display;
+    document.getElementById("btn-accept-left").style.display = display;
+    document.getElementById("btn-accept-right").style.display = display;
+}
+
+// Lógica Core de Diff e Renderização
+function renderMergeView(text1, text2) {
+  const container = document.getElementById("merge-rows-container");
+  container.innerHTML = "";
+  mergeRows = [];
+
   const diffs = Diff.diffLines(text1, text2);
-
-  let currentId = 0;
+  let rowIdCounter = 0;
   let i = 0;
+  
+  // Contadores de linha (1-based)
+  let lLine = 1; // Left
+  let rLine = 1; // Right
+  let cLine = 1; // Center (Result) logic approximation
 
   while (i < diffs.length) {
     const part = diffs[i];
+    const rowId = rowIdCounter++;
 
-    // 1. Caso Texto Comum (Sem mudanças)
+    // 1. Comum (Sem alterações)
     if (!part.added && !part.removed) {
-      renderCommonBlock(part.value);
-      mergeState.push({
-        id: currentId++,
-        type: "common",
-        text: part.value,
-      });
+      // Lines count
+      const linesCount = countLines(part.value);
+      
+      createRow(container, rowId, "common", 
+        part.value, lLine,
+        part.value, cLine,
+        part.value, rLine
+      );
+      
+      lLine += linesCount;
+      rLine += linesCount;
+      cLine += linesCount;
+      
       i++;
-    }
-    // 2. Caso Conflito (Remoção seguida de Adição = Modificação) ou (Apenas Remoção / Apenas Adição)
+    } 
+    // 2. Mudanças (Conflito, Adição ou Remoção)
     else {
-      let leftText = "";
-      let rightText = "";
-      let hasLeft = false;
-      let hasRight = false;
+      let leftContent = "";
+      let rightContent = "";
+      let centerContent = ""; 
+      
+      let type = "conflict"; 
+      let lCount = 0;
+      let rCount = 0;
 
-      // Verifica se é uma remoção (está no texto 1)
+      // Analisa par removido/adicionado
       if (part.removed) {
-        leftText = part.value;
-        hasLeft = true;
-        i++; // Avança
-        // Verifica se o próximo é uma adição (está no texto 2) - substituindo o trecho anterior
+        leftContent = part.value;
+        lCount = countLines(leftContent);
+        
+        i++;
         if (i < diffs.length && diffs[i].added) {
-          rightText = diffs[i].value;
-          hasRight = true;
-          i++;
+          rightContent = diffs[i].value;
+          rCount = countLines(rightContent);
+          i++; 
+        } else {
+            type = "left-only";
         }
       } else if (part.added) {
-        rightText = part.value;
-        hasRight = true;
+        rightContent = part.value;
+        rCount = countLines(rightContent);
+        type = "right-only";
         i++;
       }
 
-      // Cria o bloco visual de conflito
-      const blockId = currentId++;
-      // Por padrão, se for só adição, seleciona direita. Se for só remoção, seleciona nenhum (ou esquerda vazio).
-      // Para forçar o usuário a escolher, iniciamos como null, ou definimos uma regra padrão.
-      // Regra padrão aqui: Prioriza o NOVO (Direita) se houver, senão considera como remoção.
-      const defaultChoice = hasRight ? "right" : "left";
+      createRow(container, rowId, type, 
+        leftContent, lLine,
+        centerContent, cLine, // Center is empty -> doesn't consume lines yet
+        rightContent, rLine
+      );
 
-      mergeState.push({
-        id: blockId,
-        type: "conflict",
-        leftText: leftText,
-        rightText: rightText,
-        choice: defaultChoice,
-      });
-
-      renderConflictBlock(blockId, leftText, rightText, defaultChoice);
+      lLine += lCount;
+      rLine += rCount;
+      // cLine does not advance because center content is initially empty for conflicts
+      // If we auto-select, we would advance cLine.
     }
   }
-
-  updateFinalOutput();
 }
 
-function renderCommonBlock(text) {
-  const div = document.createElement("div");
-  div.className = "line-block line-common";
-  div.textContent = text;
-  document.getElementById("merge-view").appendChild(div);
-}
-
-function renderConflictBlock(id, leftText, rightText, initialChoice) {
-  const container = document.createElement("div");
-  container.className = "conflict-container";
-  container.id = `conflict-${id}`;
-
-  // Determina classe inicial
-  if (initialChoice === "left") container.classList.add("selected-left");
-  if (initialChoice === "right")
-    container.classList.add("selected-right");
-
-  // Bloco da Esquerda
-  const leftDiv = document.createElement("div");
-  leftDiv.className = "conflict-part part-left";
-  leftDiv.onclick = () => selectMergeOption(id, "left");
-  leftDiv.innerHTML = `<span class="action-btn">Usar Este</span><div class="part-content">${
-    escapeHtml(leftText) || "(Vazio)"
-  }</div>`;
-
-  // Bloco da Direita
-  const rightDiv = document.createElement("div");
-  rightDiv.className = "conflict-part part-right";
-  rightDiv.onclick = () => selectMergeOption(id, "right");
-  rightDiv.innerHTML = `<span class="action-btn">Usar Este</span><div class="part-content">${
-    escapeHtml(rightText) || "(Vazio)"
-  }</div>`;
-
-  container.appendChild(leftDiv);
-  container.appendChild(rightDiv);
-  document.getElementById("merge-view").appendChild(container);
-}
-
-function selectMergeOption(id, side) {
-  // Atualiza estado
-  const stateIndex = mergeState.findIndex((x) => x.id === id);
-  if (stateIndex === -1) return;
-
-  mergeState[stateIndex].choice = side;
-
-  // Atualiza UI
-  const container = document.getElementById(`conflict-${id}`);
-  container.classList.remove("selected-left", "selected-right");
-  container.classList.add(
-    side === "left" ? "selected-left" : "selected-right"
-  );
-
-  updateFinalOutput();
-}
-
-function updateFinalOutput() {
-  let finalText = "";
-  mergeState.forEach((block) => {
-    if (block.type === "common") {
-      finalText += block.text;
-    } else {
-      if (block.choice === "left") finalText += block.leftText;
-      else if (block.choice === "right") finalText += block.rightText;
+function countLines(text) {
+    if (!text) return 0;
+    const split = text.split('\n');
+    if (split.length > 0 && split[split.length-1] === '') {
+        return split.length - 1; 
     }
-  });
-  const outputElement = document.getElementById("result-output");
-  if(outputElement) {
-     outputElement.value = finalText;
-     // Update line numbers for result since it's updated programmatically
-     updateLineNumbers('result-output', 'gutter-result');
-  }
+    return split.length;
 }
 
-function escapeHtml(text) {
-  if (!text) return "";
-  return text
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#039;");
+function generateLineNumbers(startLine, text) {
+    if (!text) return "";
+    const count = countLines(text);
+    let html = "";
+    for (let j = 0; j < count; j++) {
+        html += `${startLine + j}\n`;
+    }
+    return html;
+}
+
+function createRow(container, id, type, leftText, lLineStart, centerText, cLineStart, rightText, rLineStart) {
+  const row = document.createElement("div");
+  row.className = `merge-row ${type}`; // Add type class
+  row.dataset.id = id;
+
+  // ... (rest of createRow) ...
+  // --- Left Cell ---
+  const leftCell = document.createElement("div");
+  leftCell.className = `merge-cell left ${type === 'common' ? '' : 'diff-remove'}`;
+  
+  // Gutter
+  const leftGutter = document.createElement("div");
+  leftGutter.className = "cell-gutter";
+  leftGutter.innerText = generateLineNumbers(lLineStart, leftText);
+  leftCell.appendChild(leftGutter);
+
+  // Content
+  const leftContentDiv = document.createElement("div");
+  leftContentDiv.className = "cell-text";
+  if (!leftText) leftContentDiv.classList.add("diff-empty");
+  leftContentDiv.textContent = leftText || "";
+  leftCell.appendChild(leftContentDiv);
+  
+  // Botão (Seta) na Esquerda -> Jogar para o Centro
+  if (type !== "common" && leftText) {
+    const btn = document.createElement("button");
+    btn.className = "action-arrow";
+    btn.innerHTML = "&gt;"; 
+    btn.title = "Usar este bloco";
+    btn.onclick = () => applyContentToCenter(id, leftText);
+    leftCell.appendChild(btn);
+  }
+
+  // --- Center Cell ---
+  const centerCell = document.createElement("div");
+  centerCell.className = `merge-cell center ${type === 'common' ? '' : 'conflict-center'}`;
+  centerCell.id = `center-cell-wrapper-${id}`;
+
+  // Gutter Center
+  const centerGutter = document.createElement("div");
+  centerGutter.className = "cell-gutter";
+  // For conflicts, initially empty, so no line numbers passed
+  centerGutter.innerText = generateLineNumbers(cLineStart, centerText);
+  centerCell.appendChild(centerGutter);
+
+  // Content Center
+  const centerContentDiv = document.createElement("div");
+  centerContentDiv.className = "cell-text";
+  centerContentDiv.contentEditable = true; // Editable PART
+  centerContentDiv.textContent = centerText || ""; 
+  centerContentDiv.id = `center-cell-${id}`;
+  centerCell.appendChild(centerContentDiv);
+
+  // --- Right Cell ---
+  const rightCell = document.createElement("div");
+  rightCell.className = `merge-cell right ${type === 'common' ? '' : 'diff-add'}`;
+
+  // Gutter Right
+  const rightGutter = document.createElement("div");
+  rightGutter.className = "cell-gutter";
+  rightGutter.innerText = generateLineNumbers(rLineStart, rightText);
+  rightCell.appendChild(rightGutter);
+
+  // Content Right
+  const rightContentDiv = document.createElement("div");
+  rightContentDiv.className = "cell-text";
+  if (!rightText) rightContentDiv.classList.add("diff-empty");
+  rightContentDiv.textContent = rightText || "";
+  rightCell.appendChild(rightContentDiv);
+
+  // Botão (Seta) na Direita -> Jogar para o Centro
+  if (type !== "common" && rightText) {
+    const btn = document.createElement("button");
+    btn.className = "action-arrow";
+    btn.innerHTML = "&lt;"; 
+    btn.title = "Usar este bloco";
+    btn.onclick = () => applyContentToCenter(id, rightText);
+    rightCell.appendChild(btn);
+  }
+
+  row.appendChild(leftCell);
+  row.appendChild(centerCell);
+  row.appendChild(rightCell);
+  container.appendChild(row);
+}
+
+function acceptAll(side) {
+    const container = document.getElementById("merge-rows-container");
+    const rows = container.getElementsByClassName("merge-row");
+    
+    // side: 'left' or 'right'
+    for (let row of rows) {
+        // Skip common rows
+        if (row.classList.contains("common")) continue;
+        
+        const id = row.dataset.id;
+        
+        // Find content in the specified side cell
+        // .merge-cell.left .cell-text OR .merge-cell.right .cell-text
+        const sourceCell = row.querySelector(`.merge-cell.${side} .cell-text`);
+        if (sourceCell) {
+            const content = sourceCell.innerText; // innerText handles newlines well? Or textContent? 
+            // In createRow we set textContent. In input it is pre-wrap.
+            // Using textContent from source div is safest to get raw text.
+            applyContentToCenter(id, sourceCell.textContent);
+        }
+    }
+}
+
+function applyContentToCenter(rowId, content) {
+    const cell = document.getElementById(`center-cell-${rowId}`);
+    if (cell) {
+        // Opção: Substituir ou Anexar? 
+        // Geralmente "Move" substitui o estado atual daquele bloco de conflito
+        cell.textContent = content; // Usa textContent para preservar quebras de linha com white-space: pre-wrap
+        
+        // Update Gutter (Relative line numbers for conflict blocks)
+        const gutter = cell.previousElementSibling;
+        if (gutter && gutter.classList.contains('cell-gutter')) {
+             gutter.innerText = generateLineNumbers(1, content);
+        }
+    }
 }
 
 function copyResult() {
-  const result = document.getElementById("result-output");
-  if(result) {
-    result.select();
-    document.execCommand("copy");
-    alert("Resultado copiado para a área de transferência!");
+  // Coletar texto de todas as células centrais
+  const container = document.getElementById("merge-rows-container");
+  let result = "";
+  // Percorre as linhas na ordem
+  const rows = container.getElementsByClassName("merge-row");
+  for (let row of rows) {
+    // Select the content div inside the center cell
+    const centerCellText = row.querySelector(".merge-cell.center .cell-text");
+    if (centerCellText) {
+       result += centerCellText.innerText;
+    }
   }
+
+  navigator.clipboard.writeText(result).then(() => {
+    alert("Resultado copiado para a área de transferência!");
+  });
 }
 
-// Inicializa comparação ao carregar
-window.onload = function() {
-    compareTexts();
-    // Initial line numbers
-    updateLineNumbers('text1', 'gutter1');
-    updateLineNumbers('text2', 'gutter2');
-
-    // Add event listeners for sync scroll
-    // Using simple approach: onscroll on textarea updates gutter
-    // The HTML elements will have oninput and onscroll attributes, but we can also bind here if needed.
-    // For simplicity, we rely on the HTML attributes calling these functions globally.
-};
-
+// Funções de Input (Mantidas para funcionamento da tela inicial)
 function updateLineNumbers(textAreaId, gutterId) {
     const textarea = document.getElementById(textAreaId);
     const gutter = document.getElementById(gutterId);
     if (!textarea || !gutter) return;
 
     const lines = textarea.value.split('\n').length;
-    // Generate numbers 1 to lines
-    // Using Array.from is cleaner but loop is faster for huge files
     let html = '';
     for(let i=1; i<=lines; i++) {
         html += `<div>${i}</div>`;
@@ -204,3 +295,9 @@ function syncScroll(textAreaId, gutterId) {
     if (!textarea || !gutter) return;
     gutter.scrollTop = textarea.scrollTop;
 }
+
+// Inicialização
+window.onload = function() {
+    updateLineNumbers('text1', 'gutter1');
+    updateLineNumbers('text2', 'gutter2');
+};

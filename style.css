@@ -97,111 +97,189 @@ textarea {
 }
 
 /* Área central de Merge */
-#merge-view {
-  overflow-y: auto;
-  background-color: var(--input-bg);
-  border: 1px solid var(--border-color);
-  line-height: 1.5;
-}
-
-.line-block {
-  border-bottom: 1px solid #333;
-  display: flex;
-  flex-direction: column;
-}
-
-.line-common {
-  padding: 2px 10px;
-  color: #888;
-  white-space: pre-wrap;
-}
-
-.conflict-container {
-  display: flex;
-  flex-direction: row;
-  border-top: 1px solid var(--border-color);
-  border-bottom: 1px solid var(--border-color);
-}
-
-.conflict-part {
-  flex: 1;
-  padding: 5px;
-  cursor: pointer;
-  position: relative;
-  transition: opacity 0.2s;
-}
-
-.conflict-part:hover {
-  opacity: 0.8;
-}
-
-.part-left {
-  background-color: var(--diff-del-bg);
-  border-right: 1px solid var(--border-color);
-}
-.part-right {
-  background-color: var(--diff-add-bg);
-}
-
-.part-content {
-  white-space: pre-wrap;
-  word-break: break-all;
-  font-size: 13px;
-  line-height: 1.5;
-}
-
-.action-btn {
-  position: absolute;
-  top: 2px;
-  right: 2px;
-  font-size: 10px;
-  background: rgba(0, 0, 0, 0.5);
-  color: white;
-  padding: 2px 5px;
-  border-radius: 3px;
-  pointer-events: none;
-  line-height: normal;
-}
-
-/* Estilo para item selecionado no merge */
-.selected-left .part-right {
-  opacity: 0.3;
-  text-decoration: line-through;
-}
-.selected-right .part-left {
-  opacity: 0.3;
-  text-decoration: line-through;
-}
-
-.selected-left .part-left {
-  border: 2px solid #64b5f6;
-}
-.selected-right .part-right {
-  border: 2px solid #81c784;
-}
-
-.controls {
-  padding: 10px;
-  display: flex;
-  gap: 10px;
-  background: #2d2d2d;
-}
-
-button.btn-primary {
+/* Botões do cabeçalho */
+.btn-primary {
   background-color: var(--btn-bg);
   color: white;
-  border: none;
+  border: 1px solid var(--btn-bg);
   padding: 8px 16px;
   cursor: pointer;
   font-weight: bold;
 }
-button.btn-primary:hover {
+.btn-primary:hover {
   background-color: var(--btn-hover);
+  border-color: var(--btn-hover);
 }
 
-/* Output area */
-.output-pane {
-  flex: 0 0 30%;
-  border-top: 2px solid var(--border-color);
+.btn-secondary {
+  background-color: #444;
+  color: #ccc;
+  border: 1px solid #555;
+  padding: 8px 16px;
+  cursor: pointer;
+}
+.btn-secondary:hover {
+  background-color: #555;
+}
+
+/* Container do Merge (3 Colunas) */
+.merge-container {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
   min-height: 0;
+  background-color: #1e1e1e;
+  overflow: hidden;
+}
+
+.merge-header {
+  display: flex;
+  background-color: #2d2d2d;
+  border-bottom: 1px solid #333;
+  padding: 5px 0;
+  font-weight: bold;
+  color: #9cdcfe;
+}
+
+.col-header {
+  flex: 1;
+  text-align: center;
+  border-right: 1px solid #333;
+}
+.col-header:last-child {
+  border-right: none;
+}
+
+#merge-rows-container {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.merge-row {
+  display: flex;
+  border-bottom: 1px solid #333;
+  width: 100%;
+}
+
+.merge-cell {
+  flex: 1;
+  padding: 0; /* Remove padding from parent, move to children */
+  font-size: 14px;
+  line-height: 1.5;
+  position: relative;
+  min-width: 0;
+  outline: none;
+  font-family: inherit;
+  display: flex; /* Flex to hold gutter and text side-by-side */
+  flex-direction: row;
+}
+
+.cell-gutter {
+  user-select: none;
+  background-color: #252526; /* Slightly darker */
+  color: #555;
+  padding: 5px;
+  text-align: right;
+  min-width: 30px;
+  border-right: 1px solid #333;
+  white-space: pre;
+  overflow: hidden;
+}
+
+.cell-text {
+  flex: 1;
+  padding: 5px 10px;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  outline: none;
+}
+
+.merge-cell.left {
+  background-color: #252526;
+  border-right: 1px solid #444;
+  color: #888;
+}
+
+.merge-cell.center {
+  background-color: #1e1e1e;
+  color: #d4d4d4;
+  border-right: 1px solid #444;
+}
+.merge-cell.center .cell-text:focus {
+  background-color: #2a2a2a;
+}
+.merge-cell.center .cell-gutter {
+    background-color: #1e1e1e;
+}
+
+.merge-cell.right {
+  background-color: #252526;
+  color: #888;
+}
+
+/* Diferenças */
+.diff-remove {
+  background-color: rgba(69, 10, 10, 0.4); /* Vermelho mais visível */
+  border-left: 3px solid #f66;
+}
+.diff-add {
+  background-color: rgba(10, 50, 10, 0.4); /* Verde mais visível */
+  border-left: 3px solid #6f6;
+}
+
+.diff-empty {
+    background-color: #202020;
+    /* hachurado? */
+    background-image: repeating-linear-gradient(45deg, #252526 25%, transparent 25%, transparent 75%, #252526 75%, #252526), repeating-linear-gradient(45deg, #252526 25%, #1e1e1e 25%, #1e1e1e 75%, #252526 75%, #252526);
+    background-position: 0 0, 10px 10px;
+    background-size: 20px 20px;
+    opacity: 0.5;
+}
+
+/* ... (action arrow styles remain same) ... */
+
+/* Botões de Ação (Setas) */
+.action-arrow {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 24px;
+  height: 24px;
+  background-color: #0e639c;
+  color: white;
+  border: none;
+  border-radius: 50%;
+  text-align: center;
+  line-height: 24px;
+  cursor: pointer;
+  z-index: 10;
+  opacity: 0.7;
+  transition: opacity 0.2s, transform 0.2s;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.action-arrow:hover {
+  opacity: 1;
+  transform: translateY(-50%) scale(1.1);
+  background-color: #1177bb;
+}
+
+/* Botão da esquerda fica na borda direita da célula esquerda */
+.merge-cell.left .action-arrow {
+  right: -12px;
+}
+
+/* Botão da direita fica na borda esquerda da célula direita */
+.merge-cell.right .action-arrow {
+  left: -12px;
+}
+
+/* Conflict highlight in center if needed */
+.conflict-center {
+  background-color: rgba(100, 100, 0, 0.2); /* Amarelado para conflito/atenção */
+  border: 1px dashed #aa0;
 }
