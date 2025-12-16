@@ -283,3 +283,15 @@ textarea {
   background-color: rgba(100, 100, 0, 0.2); /* Amarelado para conflito/atenção */
   border: 1px dashed #aa0;
 }
+
+.diff-word-remove {
+  background-color: rgba(255, 100, 100, 0.3);
+  text-decoration: line-through;
+  color: #ffcccc;
+}
+
+.diff-word-add {
+  background-color: rgba(100, 255, 100, 0.3);
+  font-weight: bold;
+  color: #ccffcc;
+}

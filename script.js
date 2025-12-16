@@ -34,6 +34,38 @@ function toggleMergeButtons(show) {
 }
 
 // Lógica Core de Diff e Renderização
+// Helper para escapar HTML
+function escapeHtml(text) {
+  if (!text) return "";
+  return text
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
+// Helper para calcular diff de palavras e retornar HTML
+function computeWordDiffHtml(text1, text2) {
+  const diff = Diff.diffWords(text1, text2);
+  let leftHtml = "";
+  let rightHtml = "";
+
+  diff.forEach((part) => {
+    const escapedValue = escapeHtml(part.value);
+    if (part.removed) {
+      leftHtml += `<span class="diff-word-remove">${escapedValue}</span>`;
+    } else if (part.added) {
+      rightHtml += `<span class="diff-word-add">${escapedValue}</span>`;
+    } else {
+      leftHtml += escapedValue;
+      rightHtml += escapedValue;
+    }
+  });
+
+  return { leftHtml, rightHtml };
+}
+
 function renderMergeView(text1, text2) {
   const container = document.getElementById("merge-rows-container");
   container.innerHTML = "";
@@ -43,10 +75,9 @@ function renderMergeView(text1, text2) {
   let rowIdCounter = 0;
   let i = 0;
   
-  // Contadores de linha (1-based)
-  let lLine = 1; // Left
-  let rLine = 1; // Right
-  let cLine = 1; // Center (Result) logic approximation
+  let lLine = 1; 
+  let rLine = 1; 
+  let cLine = 1; 
 
   while (i < diffs.length) {
     const part = diffs[i];
@@ -54,13 +85,13 @@ function renderMergeView(text1, text2) {
 
     // 1. Comum (Sem alterações)
     if (!part.added && !part.removed) {
-      // Lines count
       const linesCount = countLines(part.value);
+      const safeHtml = escapeHtml(part.value);
       
       createRow(container, rowId, "common", 
-        part.value, lLine,
-        part.value, cLine,
-        part.value, rLine
+        { html: safeHtml, raw: part.value, startLine: lLine },
+        { html: safeHtml, raw: part.value, startLine: cLine },
+        { html: safeHtml, raw: part.value, startLine: rLine }
       );
       
       lLine += linesCount;
@@ -73,7 +104,6 @@ function renderMergeView(text1, text2) {
     else {
       let leftContent = "";
       let rightContent = "";
-      let centerContent = ""; 
       
       let type = "conflict"; 
       let lCount = 0;
@@ -99,16 +129,24 @@ function renderMergeView(text1, text2) {
         i++;
       }
 
+      // Calcula o HTML com destaque de palavras se houver conteúdo em ambos os lados
+      let leftHtml = escapeHtml(leftContent);
+      let rightHtml = escapeHtml(rightContent);
+
+      if (leftContent && rightContent) {
+          const wordDiff = computeWordDiffHtml(leftContent, rightContent);
+          leftHtml = wordDiff.leftHtml;
+          rightHtml = wordDiff.rightHtml;
+      }
+
       createRow(container, rowId, type, 
-        leftContent, lLine,
-        centerContent, cLine, // Center is empty -> doesn't consume lines yet
-        rightContent, rLine
+        { html: leftHtml, raw: leftContent, startLine: lLine },
+        { html: "", raw: "", startLine: cLine }, // Center is empty
+        { html: rightHtml, raw: rightContent, startLine: rLine }
       );
 
       lLine += lCount;
       rLine += rCount;
-      // cLine does not advance because center content is initially empty for conflicts
-      // If we auto-select, we would advance cLine.
     }
   }
 }
@@ -132,89 +170,58 @@ function generateLineNumbers(startLine, text) {
     return html;
 }
 
-function createRow(container, id, type, leftText, lLineStart, centerText, cLineStart, rightText, rLineStart) {
+function createRow(container, id, type, leftData, centerData, rightData) {
   const row = document.createElement("div");
-  row.className = `merge-row ${type}`; // Add type class
+  row.className = `merge-row ${type}`; 
   row.dataset.id = id;
 
-  // ... (rest of createRow) ...
-  // --- Left Cell ---
-  const leftCell = document.createElement("div");
-  leftCell.className = `merge-cell left ${type === 'common' ? '' : 'diff-remove'}`;
-  
-  // Gutter
-  const leftGutter = document.createElement("div");
-  leftGutter.className = "cell-gutter";
-  leftGutter.innerText = generateLineNumbers(lLineStart, leftText);
-  leftCell.appendChild(leftGutter);
+  const createCell = (className, data, isEditable = false, side = null) => {
+      const cell = document.createElement("div");
+      cell.className = `merge-cell ${className}`;
+      if (className === 'center') cell.id = `center-cell-wrapper-${id}`;
+      
+      // Classes adicionais para coloração de fundo baseada no tipo
+      if (type !== 'common') {
+          if (side === 'left') cell.classList.add('diff-remove');
+          else if (side === 'right') cell.classList.add('diff-add');
+          
+          if (className === 'center') cell.classList.add('conflict-center');
+      }
 
-  // Content
-  const leftContentDiv = document.createElement("div");
-  leftContentDiv.className = "cell-text";
-  if (!leftText) leftContentDiv.classList.add("diff-empty");
-  leftContentDiv.textContent = leftText || "";
-  leftCell.appendChild(leftContentDiv);
-  
-  // Botão (Seta) na Esquerda -> Jogar para o Centro
-  if (type !== "common" && leftText) {
-    const btn = document.createElement("button");
-    btn.className = "action-arrow";
-    btn.innerHTML = "&gt;"; 
-    btn.title = "Usar este bloco";
-    btn.onclick = () => applyContentToCenter(id, leftText);
-    leftCell.appendChild(btn);
-  }
+      // Gutter
+      const gutter = document.createElement("div");
+      gutter.className = "cell-gutter";
+      gutter.innerText = data.raw ? generateLineNumbers(data.startLine, data.raw) : "";
+      cell.appendChild(gutter);
 
-  // --- Center Cell ---
-  const centerCell = document.createElement("div");
-  centerCell.className = `merge-cell center ${type === 'common' ? '' : 'conflict-center'}`;
-  centerCell.id = `center-cell-wrapper-${id}`;
+      // Content
+      const contentDiv = document.createElement("div");
+      contentDiv.className = "cell-text";
+      if (!data.raw && !isEditable) contentDiv.classList.add("diff-empty");
+      
+      if (isEditable) {
+           contentDiv.contentEditable = true;
+           contentDiv.id = `center-cell-${id}`;
+      }
+      contentDiv.innerHTML = data.html || ""; 
+      
+      cell.appendChild(contentDiv);
 
-  // Gutter Center
-  const centerGutter = document.createElement("div");
-  centerGutter.className = "cell-gutter";
-  // For conflicts, initially empty, so no line numbers passed
-  centerGutter.innerText = generateLineNumbers(cLineStart, centerText);
-  centerCell.appendChild(centerGutter);
+      // Botão de ação
+      if (side && type !== 'common' && data.raw) {
+          const btn = document.createElement("button");
+          btn.className = "action-arrow";
+          btn.innerHTML = side === 'left' ? "&gt;" : "&lt;";
+          btn.title = "Usar este bloco";
+          btn.onclick = () => applyContentToCenter(id, data.raw);
+          cell.appendChild(btn);
+      }
+      return cell;
+  };
 
-  // Content Center
-  const centerContentDiv = document.createElement("div");
-  centerContentDiv.className = "cell-text";
-  centerContentDiv.contentEditable = true; // Editable PART
-  centerContentDiv.textContent = centerText || ""; 
-  centerContentDiv.id = `center-cell-${id}`;
-  centerCell.appendChild(centerContentDiv);
-
-  // --- Right Cell ---
-  const rightCell = document.createElement("div");
-  rightCell.className = `merge-cell right ${type === 'common' ? '' : 'diff-add'}`;
-
-  // Gutter Right
-  const rightGutter = document.createElement("div");
-  rightGutter.className = "cell-gutter";
-  rightGutter.innerText = generateLineNumbers(rLineStart, rightText);
-  rightCell.appendChild(rightGutter);
-
-  // Content Right
-  const rightContentDiv = document.createElement("div");
-  rightContentDiv.className = "cell-text";
-  if (!rightText) rightContentDiv.classList.add("diff-empty");
-  rightContentDiv.textContent = rightText || "";
-  rightCell.appendChild(rightContentDiv);
-
-  // Botão (Seta) na Direita -> Jogar para o Centro
-  if (type !== "common" && rightText) {
-    const btn = document.createElement("button");
-    btn.className = "action-arrow";
-    btn.innerHTML = "&lt;"; 
-    btn.title = "Usar este bloco";
-    btn.onclick = () => applyContentToCenter(id, rightText);
-    rightCell.appendChild(btn);
-  }
-
-  row.appendChild(leftCell);
-  row.appendChild(centerCell);
-  row.appendChild(rightCell);
+  row.appendChild(createCell('left', leftData, false, 'left'));
+  row.appendChild(createCell('center', centerData, true));
+  row.appendChild(createCell('right', rightData, false, 'right'));
   container.appendChild(row);
 }
 
