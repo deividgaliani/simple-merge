@@ -228,12 +228,14 @@ textarea {
   border-left: 3px solid #6f6;
 }
 
-.diff-empty {
-    background-color: #202020;
-    /* hachurado? */
-    background-image: repeating-linear-gradient(45deg, #252526 25%, transparent 25%, transparent 75%, #252526 75%, #252526), repeating-linear-gradient(45deg, #252526 25%, #1e1e1e 25%, #1e1e1e 75%, #252526 75%, #252526);
-    background-position: 0 0, 10px 10px;
-    background-size: 20px 20px;
+.merge-cell.diff-empty-container {
+    background: repeating-linear-gradient(
+        45deg,
+        #1e1e1e,
+        #1e1e1e 10px,
+        #252526 10px,
+        #252526 20px
+    );
     opacity: 0.5;
 }
 

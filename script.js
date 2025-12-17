@@ -3,8 +3,8 @@ let mergeRows = []; // Armazena referências para facilitar a extração do resu
 
 // Funções de Navegação
 function startMerge() {
-  const text1 = document.getElementById("text1").value;
-  const text2 = document.getElementById("text2").value;
+  const text1 = document.getElementById("text1").value.replace(/\t/g, '    ');
+  const text2 = document.getElementById("text2").value.replace(/\t/g, '    ');
 
   // Renderizar a UI de Merge
   renderMergeView(text1, text2);
@@ -31,6 +31,7 @@ function toggleMergeButtons(show) {
     document.getElementById("btn-copy").style.display = display;
     document.getElementById("btn-accept-left").style.display = display;
     document.getElementById("btn-accept-right").style.display = display;
+    document.getElementById("btn-download").style.display = display;
 }
 
 // Lógica Core de Diff e Renderização
@@ -197,7 +198,11 @@ function createRow(container, id, type, leftData, centerData, rightData) {
       // Content
       const contentDiv = document.createElement("div");
       contentDiv.className = "cell-text";
-      if (!data.raw && !isEditable) contentDiv.classList.add("diff-empty");
+      
+      // Modificado: Aplica a classe de vazio no container (cell) e não no texto
+      if (!data.raw && !isEditable) {
+          cell.classList.add("diff-empty-container");
+      }
       
       if (isEditable) {
            contentDiv.contentEditable = true;
@@ -251,35 +256,64 @@ function acceptAll(side) {
 function applyContentToCenter(rowId, content) {
     const cell = document.getElementById(`center-cell-${rowId}`);
     if (cell) {
-        // Opção: Substituir ou Anexar? 
-        // Geralmente "Move" substitui o estado atual daquele bloco de conflito
-        cell.textContent = content; // Usa textContent para preservar quebras de linha com white-space: pre-wrap
+        cell.textContent = content; // Usa textContent para segurança
         
-        // Update Gutter (Relative line numbers for conflict blocks)
+        // Remove classe de conflito se resolvido
+        const parentCell = cell.closest('.merge-cell');
+        if (parentCell) {
+            parentCell.classList.remove('conflict-center');
+            parentCell.style.borderColor = '#333'; // Reseta borda
+        }
+
+        // Atualiza a numeração da linha deste bloco específico
         const gutter = cell.previousElementSibling;
-        if (gutter && gutter.classList.contains('cell-gutter')) {
+        if (gutter) {
              gutter.innerText = generateLineNumbers(1, content);
         }
     }
 }
 
 function copyResult() {
-  // Coletar texto de todas as células centrais
-  const container = document.getElementById("merge-rows-container");
-  let result = "";
-  // Percorre as linhas na ordem
-  const rows = container.getElementsByClassName("merge-row");
-  for (let row of rows) {
-    // Select the content div inside the center cell
-    const centerCellText = row.querySelector(".merge-cell.center .cell-text");
-    if (centerCellText) {
-       result += centerCellText.innerText;
-    }
-  }
+    const container = document.getElementById("merge-rows-container");
+    const rows = container.getElementsByClassName("merge-row");
+    let result = [];
 
-  navigator.clipboard.writeText(result).then(() => {
-    alert("Resultado copiado para a área de transferência!");
-  });
+    for (let row of rows) {
+        const centerCellText = row.querySelector(".merge-cell.center .cell-text");
+        if (centerCellText) {
+            // textContent é mais seguro que innerText para preservar raw code
+            result.push(centerCellText.textContent);
+        }
+    }
+
+    // Unir com base na lógica de blocos
+    const finalString = result.join(""); 
+    
+    navigator.clipboard.writeText(finalString).then(() => {
+        const btn = document.getElementById("btn-copy");
+        const originalText = btn.innerText;
+        btn.innerText = "Copiado!";
+        setTimeout(() => btn.innerText = originalText, 2000);
+    });
+}
+
+function downloadResult() {
+    const container = document.getElementById("merge-rows-container");
+    const rows = container.getElementsByClassName("merge-row");
+    let content = "";
+    
+    for (let row of rows) {
+        const cell = row.querySelector(".merge-cell.center .cell-text");
+        if(cell) content += cell.textContent;
+    }
+
+    const blob = new Blob([content], { type: "text/plain;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "merged_result.txt";
+    a.click();
+    URL.revokeObjectURL(url);
 }
 
 // Funções de Input (Mantidas para funcionamento da tela inicial)
