@@ -150,6 +150,9 @@ function renderMergeView(text1, text2) {
       rLine += rCount;
     }
   }
+  
+  // Assegura numeração correta após renderização inicial
+  recalcCenterLineNumbers();
 }
 
 function countLines(text) {
@@ -265,10 +268,45 @@ function applyContentToCenter(rowId, content) {
             parentCell.style.borderColor = '#333'; // Reseta borda
         }
 
-        // Atualiza a numeração da linha deste bloco específico
-        const gutter = cell.previousElementSibling;
-        if (gutter) {
-             gutter.innerText = generateLineNumbers(1, content);
+        // Atualiza a numeração de TODAS as linhas centrais para manter consistência
+        recalcCenterLineNumbers();
+    }
+}
+
+function recalcCenterLineNumbers() {
+    const container = document.getElementById("merge-rows-container");
+    const rows = container.getElementsByClassName("merge-row");
+    let currentLine = 1;
+
+    for (let row of rows) {
+        // Encontra a célula central
+        const centerCell = row.querySelector(".merge-cell.center");
+        if (!centerCell) continue;
+
+        const contentDiv = centerCell.querySelector(".cell-text");
+        const gutter = centerCell.querySelector(".cell-gutter");
+        
+        if (contentDiv && gutter) {
+            const text = contentDiv.textContent;
+            // Se tiver texto (mesmo que vazio, mas existindo como bloco lógico), conta linhas
+            // Se estiver vazio (conflito não resolvido), assumimos 0 linhas visualmente?
+            // Ou assumimos que o bloco existe mas vazio? 
+            // O comportamento atual de 'conflict' é vazio.
+            
+            // Se for 'common', sempre tem texto.
+            // Se for 'conflict', pode estar vazio (0 linhas no output) ou preenchido.
+            
+            // Mas cuidado: countLines("") retorna 0.
+            const lines = countLines(text);
+            
+            if (lines > 0) {
+                gutter.innerText = generateLineNumbers(currentLine, text);
+                currentLine += lines;
+            } else {
+                gutter.innerText = "";
+                // Não incrementa currentLine se não há texto no output, 
+                // o que resolve o problema de "buracos" na numeração.
+            }
         }
     }
 }
